@@ -1,5 +1,7 @@
 # Brown Noise Player
 
+![Screenshot](screenshot.png)
+
 A single-page web app that generates and plays brown noise continuously in the browser. No server, no dependencies to install, just open `index.html` and it works.
 
 ## What it does
