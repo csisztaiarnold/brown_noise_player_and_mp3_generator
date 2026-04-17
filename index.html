@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brown Noise Player</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #1a1008;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #d4a96a;
+    }
+
+    .card {
+      background: #241508;
+      border-radius: 24px;
+      padding: 48px 56px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 36px;
+      box-shadow: 0 8px 48px rgba(0,0,0,0.6);
+      min-width: 320px;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: #e8c090;
+    }
+
+    .waveform {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      height: 48px;
+    }
+
+    .waveform .bar {
+      width: 5px;
+      border-radius: 3px;
+      background: #a0622a;
+      animation: wave 1.2s ease-in-out infinite;
+      transform-origin: bottom;
+    }
+
+    .waveform.paused .bar {
+      animation-play-state: paused;
+      height: 6px !important;
+    }
+
+    .waveform .bar:nth-child(1)  { animation-delay: 0.0s; }
+    .waveform .bar:nth-child(2)  { animation-delay: 0.1s; }
+    .waveform .bar:nth-child(3)  { animation-delay: 0.2s; }
+    .waveform .bar:nth-child(4)  { animation-delay: 0.3s; }
+    .waveform .bar:nth-child(5)  { animation-delay: 0.4s; }
+    .waveform .bar:nth-child(6)  { animation-delay: 0.3s; }
+    .waveform .bar:nth-child(7)  { animation-delay: 0.2s; }
+    .waveform .bar:nth-child(8)  { animation-delay: 0.1s; }
+    .waveform .bar:nth-child(9)  { animation-delay: 0.0s; }
+
+    @keyframes wave {
+      0%, 100% { height: 8px; }
+      50%       { height: 40px; }
+    }
+
+    .play-btn {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 2px solid #a0622a;
+      background: #3a1a08;
+      color: #e8c090;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, transform 0.1s;
+      outline: none;
+    }
+
+    .play-btn:hover {
+      background: #5c3010;
+      transform: scale(1.05);
+    }
+
+    .play-btn:active {
+      transform: scale(0.97);
+    }
+
+    .play-btn svg {
+      width: 28px;
+      height: 28px;
+      fill: currentColor;
+    }
+
+    .volume-section {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .volume-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: #a07040;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #3a1a08;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #c07832;
+      border: 2px solid #e8c090;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      background: #e8a050;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #c07832;
+      border: 2px solid #e8c090;
+      cursor: pointer;
+    }
+
+    .hint {
+      font-size: 0.75rem;
+      color: #6a4020;
+      text-align: center;
+    }
+
+    .divider {
+      width: 100%;
+      border: none;
+      border-top: 1px solid #3a1a08;
+    }
+
+    .export-section {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .export-label {
+      font-size: 0.85rem;
+      color: #a07040;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .duration-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .duration-row input[type="number"] {
+      flex: 1;
+      background: #3a1a08;
+      border: 1px solid #5c3010;
+      border-radius: 8px;
+      color: #e8c090;
+      font-size: 0.95rem;
+      padding: 8px 12px;
+      outline: none;
+      appearance: textfield;
+      -moz-appearance: textfield;
+    }
+
+    .duration-row input[type="number"]::-webkit-inner-spin-button,
+    .duration-row input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .gen-btn {
+      background: #5c3010;
+      border: 1px solid #a0622a;
+      border-radius: 8px;
+      color: #e8c090;
+      font-size: 0.9rem;
+      padding: 8px 18px;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+
+    .gen-btn:hover:not(:disabled) {
+      background: #7a4018;
+    }
+
+    .gen-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .progress-wrap {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .progress-wrap.visible {
+      display: flex;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 6px;
+      background: #3a1a08;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: #c07832;
+      border-radius: 3px;
+      transition: width 0.1s linear;
+    }
+
+    .progress-text {
+      font-size: 0.75rem;
+      color: #a07040;
+      text-align: right;
+    }
+
+    .cancel-btn {
+      background: transparent;
+      border: 1px solid #5c3010;
+      border-radius: 8px;
+      color: #a07040;
+      font-size: 0.8rem;
+      padding: 4px 12px;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .cancel-btn:hover {
+      border-color: #c07832;
+      color: #e8c090;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Brown Noise Player</h1>
+
+    <div class="waveform paused" id="waveform">
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+    </div>
+
+    <button class="play-btn" id="playBtn" aria-label="Play">
+      <svg id="iconPlay" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <svg id="iconPause" viewBox="0 0 24 24" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+    </button>
+
+    <div class="volume-section">
+      <div class="volume-label">
+        <span>Volume</span>
+        <span id="volDisplay">70%</span>
+      </div>
+      <input type="range" id="volumeSlider" min="0" max="100" value="70" />
+    </div>
+
+    <p class="hint">Click play to start</p>
+
+    <hr class="divider" />
+
+    <div class="export-section">
+      <div class="export-label">
+        <span>Export MP3</span>
+        <span style="color:#6a4020;font-size:0.75rem">320 kbps · stereo</span>
+      </div>
+      <div class="duration-row">
+        <input type="number" id="durationInput" min="1" max="480" value="10" />
+        <span style="color:#6a4020;font-size:0.85rem">minutes</span>
+        <button class="gen-btn" id="genBtn">Generate &amp; Download</button>
+      </div>
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <button class="cancel-btn" id="cancelBtn">Cancel</button>
+          <div class="progress-text" id="progressText">0%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+  <script>
+    let audioCtx    = null;
+    let gainNode    = null;
+    let processor   = null;
+    let isPlaying   = false;
+    const layers = [
+      { last: 0, coeff: 0.020 },  // standard brown
+      { last: 0, coeff: 0.010 },  // deeper
+      { last: 0, coeff: 0.006 },  // very deep rumble
+      { last: 0, coeff: 0.003 },  // sub-bass foundation
+    ];
+
+    const playBtn      = document.getElementById('playBtn');
+    const iconPlay     = document.getElementById('iconPlay');
+    const iconPause    = document.getElementById('iconPause');
+    const volumeSlider = document.getElementById('volumeSlider');
+    const volDisplay   = document.getElementById('volDisplay');
+    const waveform     = document.getElementById('waveform');
+
+    function buildGraph() {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      processor = audioCtx.createScriptProcessor(4096, 0, 1);
+      processor.onaudioprocess = (e) => {
+        const out = e.outputBuffer.getChannelData(0);
+        for (let i = 0; i < out.length; i++) {
+          const white = Math.random() * 2 - 1;
+          let sample = 0;
+          for (const l of layers) {
+            const w = Math.random() * 2 - 1;
+            l.last = (l.last + l.coeff * w) / (1 + l.coeff);
+            sample += l.last;
+          }
+          out[i] = sample * 1.1;
+        }
+      };
+
+      const lpf = audioCtx.createBiquadFilter();
+      lpf.type            = 'lowpass';
+      lpf.frequency.value = 600;
+      lpf.Q.value         = 0.5;
+
+      const shelf = audioCtx.createBiquadFilter();
+      shelf.type            = 'lowshelf';
+      shelf.frequency.value = 150;
+      shelf.gain.value      = 6;
+
+      const comp = audioCtx.createDynamicsCompressor();
+      comp.threshold.value = -18;
+      comp.knee.value      = 10;
+      comp.ratio.value     = 4;
+      comp.attack.value    = 0.1;
+      comp.release.value   = 0.4;
+
+      gainNode = audioCtx.createGain();
+      gainNode.gain.value = volumeSlider.value / 100;
+
+      processor.connect(lpf);
+      lpf.connect(shelf);
+      shelf.connect(comp);
+      comp.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+    }
+
+    function startNoise() {
+      if (!audioCtx) buildGraph();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function stopNoise() {
+      if (audioCtx) audioCtx.suspend();
+    }
+
+    playBtn.addEventListener('click', () => {
+      if (isPlaying) {
+        stopNoise();
+        iconPlay.style.display  = '';
+        iconPause.style.display = 'none';
+        waveform.classList.add('paused');
+        isPlaying = false;
+      } else {
+        startNoise();
+        iconPlay.style.display  = 'none';
+        iconPause.style.display = '';
+        waveform.classList.remove('paused');
+        isPlaying = true;
+      }
+    });
+
+    volumeSlider.addEventListener('input', () => {
+      const vol = volumeSlider.value;
+      volDisplay.textContent = vol + '%';
+      if (gainNode) {
+        gainNode.gain.setTargetAtTime(vol / 100, audioCtx.currentTime, 0.01);
+      }
+    });
+
+    // ── MP3 Export ────────────────────────────────────────────────────────────
+    const genBtn       = document.getElementById('genBtn');
+    const durationInput= document.getElementById('durationInput');
+    const progressWrap = document.getElementById('progressWrap');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    const cancelBtn    = document.getElementById('cancelBtn');
+
+    let cancelRequested = false;
+
+    cancelBtn.addEventListener('click', () => { cancelRequested = true; });
+
+    function makeLPF(fc, sampleRate, Q) {
+      const w0 = 2 * Math.PI * fc / sampleRate;
+      const cosw = Math.cos(w0), sinw = Math.sin(w0);
+      const alpha = sinw / (2 * Q);
+      return {
+        b0: (1 - cosw) / 2,  b1: 1 - cosw,  b2: (1 - cosw) / 2,
+        a0: 1 + alpha,       a1: -2 * cosw,  a2: 1 - alpha,
+        x1: 0, x2: 0, y1: 0, y2: 0
+      };
+    }
+
+    function applyBiquad(f, x) {
+      const y = (f.b0/f.a0)*x + (f.b1/f.a0)*f.x1 + (f.b2/f.a0)*f.x2
+                              - (f.a1/f.a0)*f.y1 - (f.a2/f.a0)*f.y2;
+      f.x2 = f.x1; f.x1 = x;
+      f.y2 = f.y1; f.y1 = y;
+      return y;
+    }
+
+    function makeLowShelf(fc, sampleRate, gainDb) {
+      const A  = Math.pow(10, gainDb / 40);
+      const w0 = 2 * Math.PI * fc / sampleRate;
+      const cosw = Math.cos(w0), sinw = Math.sin(w0);
+      const alpha = sinw / 2 * Math.sqrt((A + 1/A) * (1/1 - 1) + 2); // S=1
+      return {
+        b0:    A*((A+1) - (A-1)*cosw + 2*Math.sqrt(A)*alpha),
+        b1:  2*A*((A-1) - (A+1)*cosw),
+        b2:    A*((A+1) - (A-1)*cosw - 2*Math.sqrt(A)*alpha),
+        a0:      (A+1) + (A-1)*cosw + 2*Math.sqrt(A)*alpha,
+        a1:   -2*((A-1) + (A+1)*cosw),
+        a2:         (A+1) + (A-1)*cosw - 2*Math.sqrt(A)*alpha,
+        x1: 0, x2: 0, y1: 0, y2: 0
+      };
+    }
+
+    async function generateAndDownload() {
+      const minutes = Math.max(1, Math.min(480, Number(durationInput.value) || 10));
+      const sampleRate   = 44100;
+      const totalSamples = sampleRate * minutes * 60;
+      const CHUNK        = sampleRate * 2;
+
+      genBtn.disabled = true;
+      cancelRequested = false;
+      progressWrap.classList.add('visible');
+      progressFill.style.width = '0%';
+      progressText.textContent  = 'Starting…';
+
+      const genLayers = [
+        { last: 0, coeff: 0.020 },
+        { last: 0, coeff: 0.010 },
+        { last: 0, coeff: 0.006 },
+        { last: 0, coeff: 0.003 },
+      ];
+
+      const lpf   = makeLPF(600, sampleRate, 0.5);
+      const shelf = makeLowShelf(150, sampleRate, 6);
+
+      const encoder = new lamejs.Mp3Encoder(2, sampleRate, 320);
+      const mp3Chunks = [];
+
+      let processed = 0;
+      while (processed < totalSamples) {
+        const count = Math.min(CHUNK, totalSamples - processed);
+        const pcmL  = new Int16Array(count);
+        const pcmR  = new Int16Array(count);
+
+        for (let i = 0; i < count; i++) {
+          let s = 0;
+          for (const l of genLayers) {
+            const w = Math.random() * 2 - 1;
+            l.last = (l.last + l.coeff * w) / (1 + l.coeff);
+            s += l.last;
+          }
+          s = applyBiquad(lpf,   s * 1.1);
+          s = applyBiquad(shelf, s);
+          const sample = Math.max(-32768, Math.min(32767, s * 26000));
+          pcmL[i] = sample;
+          pcmR[i] = sample;
+        }
+
+        const chunk = encoder.encodeBuffer(pcmL, pcmR);
+        if (chunk.length > 0) mp3Chunks.push(new Uint8Array(chunk));
+
+        processed += count;
+        const pct = Math.round(processed / totalSamples * 100);
+        progressFill.style.width  = pct + '%';
+        progressText.textContent  = pct + '%  —  rendering…';
+
+        await new Promise(r => setTimeout(r, 0));
+
+        if (cancelRequested) {
+          progressFill.style.width = '0%';
+          progressText.textContent = 'Cancelled.';
+          genBtn.disabled = false;
+          return;
+        }
+      }
+
+      const tail = encoder.flush();
+      if (tail.length > 0) mp3Chunks.push(new Uint8Array(tail));
+
+      const blob = new Blob(mp3Chunks, { type: 'audio/mpeg' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `brown-noise-${minutes}min.mp3`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+      progressText.textContent = 'Done!';
+      genBtn.disabled = false;
+    }
+
+    genBtn.addEventListener('click', generateAndDownload);
+  </script>
+</body>
+</html>
