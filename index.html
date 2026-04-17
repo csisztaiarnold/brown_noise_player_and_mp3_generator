@@ -30,7 +30,7 @@
       align-items: center;
       gap: 36px;
       box-shadow: 0 8px 48px rgba(0,0,0,0.6);
-      min-width: 320px;
+      width: min(440px, 100vw - 32px);
     }
 
     h1 {
@@ -275,6 +275,32 @@
       border-color: #c07832;
       color: #e8c090;
     }
+
+    @media (max-width: 480px) {
+      .card {
+        padding: 32px 24px;
+        gap: 24px;
+        border-radius: 16px;
+      }
+
+      h1 {
+        font-size: 1.4rem;
+      }
+
+      .play-btn {
+        width: 60px;
+        height: 60px;
+      }
+
+      .duration-row {
+        flex-wrap: wrap;
+      }
+
+      .gen-btn {
+        width: 100%;
+        text-align: center;
+      }
+    }
   </style>
 </head>
 <body>
@@ -303,7 +329,7 @@
         <span>Volume</span>
         <span id="volDisplay">70%</span>
       </div>
-      <input type="range" id="volumeSlider" min="0" max="100" value="70" />
+      <input type="range" id="volumeSlider" min="0" max="100" value="90" />
     </div>
 
     <div class="volume-section">
@@ -311,7 +337,7 @@
         <span>Deepness</span>
         <span id="deepDisplay">40%</span>
       </div>
-      <input type="range" id="deepnessSlider" min="0" max="100" value="40" />
+      <input type="range" id="deepnessSlider" min="0" max="100" value="70" />
     </div>
 
     <p class="hint">Click play to start</p>
@@ -360,6 +386,11 @@
     const deepDisplay    = document.getElementById('deepDisplay');
     const waveform     = document.getElementById('waveform');
 
+    volumeSlider.value   = localStorage.getItem('bnVolume')   ?? 90;
+    deepnessSlider.value = localStorage.getItem('bnDeepness') ?? 70;
+    volDisplay.textContent  = volumeSlider.value + '%';
+    deepDisplay.textContent = deepnessSlider.value + '%';
+
     const BASE_COEFFS = [0.020, 0.010, 0.006, 0.003];
 
     function coeffScale() {
@@ -386,7 +417,7 @@
             l.last = (l.last + l.coeff * w) / (1 + l.coeff);
             sample += l.last;
           }
-          out[i] = sample * 3.5;
+          out[i] = sample * 1.0;
         }
       };
 
@@ -396,14 +427,14 @@
       lpf.Q.value         = 0.5;
 
       const comp = audioCtx.createDynamicsCompressor();
-      comp.threshold.value = -18;
-      comp.knee.value      = 10;
-      comp.ratio.value     = 4;
-      comp.attack.value    = 0.1;
-      comp.release.value   = 0.4;
+      comp.threshold.value = -6;
+      comp.knee.value      = 3;
+      comp.ratio.value     = 20;
+      comp.attack.value    = 0.003;
+      comp.release.value   = 0.25;
 
       gainNode = audioCtx.createGain();
-      gainNode.gain.value = volumeSlider.value / 100;
+      gainNode.gain.value = (volumeSlider.value / 100) * 4.0;
 
       processor.connect(lpf);
       lpf.connect(comp);
@@ -439,13 +470,15 @@
     volumeSlider.addEventListener('input', () => {
       const vol = volumeSlider.value;
       volDisplay.textContent = vol + '%';
+      localStorage.setItem('bnVolume', vol);
       if (gainNode) {
-        gainNode.gain.setTargetAtTime(vol / 100, audioCtx.currentTime, 0.01);
+        gainNode.gain.setTargetAtTime((vol / 100) * 4.0, audioCtx.currentTime, 0.01);
       }
     });
 
     deepnessSlider.addEventListener('input', () => {
       deepDisplay.textContent = deepnessSlider.value + '%';
+      localStorage.setItem('bnDeepness', deepnessSlider.value);
       applyDeepness();
     });
 
@@ -513,7 +546,7 @@
             l.last = (l.last + l.coeff * w) / (1 + l.coeff);
             s += l.last;
           }
-          s = applyBiquad(lpf, s * 3.5);
+          s = applyBiquad(lpf, s * 1.0);
           const sample = Math.max(-32768, Math.min(32767, s * 26000));
           pcmL[i] = sample;
           pcmR[i] = sample;
