@@ -4,6 +4,8 @@
 
 A single-page web app that generates and plays brown noise continuously in the browser. No server, no dependencies to install, just open `index.html` and it works.
 
+Live version: https://jailbird.hu/brown/
+
 ## What it does
 
 - Generates brown noise in real time using the Web Audio API. The signal is produced by layering four independent low-pass integrators at different rates, giving a rich, deep texture with no looping or restarts.
