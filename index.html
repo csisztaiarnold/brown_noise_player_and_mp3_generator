@@ -306,6 +306,14 @@
       <input type="range" id="volumeSlider" min="0" max="100" value="70" />
     </div>
 
+    <div class="volume-section">
+      <div class="volume-label">
+        <span>Deepness</span>
+        <span id="deepDisplay">40%</span>
+      </div>
+      <input type="range" id="deepnessSlider" min="0" max="100" value="40" />
+    </div>
+
     <p class="hint">Click play to start</p>
 
     <hr class="divider" />
@@ -348,23 +356,37 @@
     const iconPause    = document.getElementById('iconPause');
     const volumeSlider = document.getElementById('volumeSlider');
     const volDisplay   = document.getElementById('volDisplay');
+    const deepnessSlider = document.getElementById('deepnessSlider');
+    const deepDisplay    = document.getElementById('deepDisplay');
     const waveform     = document.getElementById('waveform');
+
+    const BASE_COEFFS = [0.020, 0.010, 0.006, 0.003];
+
+    function coeffScale() {
+      return Math.pow(10, (50 - deepnessSlider.value) / 50);
+    }
+
+    function applyDeepness() {
+      const s = coeffScale();
+      layers.forEach((l, i) => { l.coeff = BASE_COEFFS[i] * s; });
+    }
 
     function buildGraph() {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      applyDeepness();
 
       processor = audioCtx.createScriptProcessor(4096, 0, 1);
       processor.onaudioprocess = (e) => {
         const out = e.outputBuffer.getChannelData(0);
         for (let i = 0; i < out.length; i++) {
-          const white = Math.random() * 2 - 1;
           let sample = 0;
           for (const l of layers) {
             const w = Math.random() * 2 - 1;
             l.last = (l.last + l.coeff * w) / (1 + l.coeff);
             sample += l.last;
           }
-          out[i] = sample * 1.1;
+          out[i] = sample * 3.5;
         }
       };
 
@@ -372,11 +394,6 @@
       lpf.type            = 'lowpass';
       lpf.frequency.value = 600;
       lpf.Q.value         = 0.5;
-
-      const shelf = audioCtx.createBiquadFilter();
-      shelf.type            = 'lowshelf';
-      shelf.frequency.value = 150;
-      shelf.gain.value      = 6;
 
       const comp = audioCtx.createDynamicsCompressor();
       comp.threshold.value = -18;
@@ -389,8 +406,7 @@
       gainNode.gain.value = volumeSlider.value / 100;
 
       processor.connect(lpf);
-      lpf.connect(shelf);
-      shelf.connect(comp);
+      lpf.connect(comp);
       comp.connect(gainNode);
       gainNode.connect(audioCtx.destination);
     }
@@ -428,6 +444,11 @@
       }
     });
 
+    deepnessSlider.addEventListener('input', () => {
+      deepDisplay.textContent = deepnessSlider.value + '%';
+      applyDeepness();
+    });
+
     // ── MP3 Export ────────────────────────────────────────────────────────────
     const genBtn       = document.getElementById('genBtn');
     const durationInput= document.getElementById('durationInput');
@@ -459,22 +480,6 @@
       return y;
     }
 
-    function makeLowShelf(fc, sampleRate, gainDb) {
-      const A  = Math.pow(10, gainDb / 40);
-      const w0 = 2 * Math.PI * fc / sampleRate;
-      const cosw = Math.cos(w0), sinw = Math.sin(w0);
-      const alpha = sinw / 2 * Math.sqrt((A + 1/A) * (1/1 - 1) + 2); // S=1
-      return {
-        b0:    A*((A+1) - (A-1)*cosw + 2*Math.sqrt(A)*alpha),
-        b1:  2*A*((A-1) - (A+1)*cosw),
-        b2:    A*((A+1) - (A-1)*cosw - 2*Math.sqrt(A)*alpha),
-        a0:      (A+1) + (A-1)*cosw + 2*Math.sqrt(A)*alpha,
-        a1:   -2*((A-1) + (A+1)*cosw),
-        a2:         (A+1) + (A-1)*cosw - 2*Math.sqrt(A)*alpha,
-        x1: 0, x2: 0, y1: 0, y2: 0
-      };
-    }
-
     async function generateAndDownload() {
       const minutes = Math.max(1, Math.min(480, Number(durationInput.value) || 10));
       const sampleRate   = 44100;
@@ -487,15 +492,10 @@
       progressFill.style.width = '0%';
       progressText.textContent  = 'Starting…';
 
-      const genLayers = [
-        { last: 0, coeff: 0.020 },
-        { last: 0, coeff: 0.010 },
-        { last: 0, coeff: 0.006 },
-        { last: 0, coeff: 0.003 },
-      ];
+      const s = coeffScale();
+      const genLayers = BASE_COEFFS.map(c => ({ last: 0, coeff: c * s }));
 
-      const lpf   = makeLPF(600, sampleRate, 0.5);
-      const shelf = makeLowShelf(150, sampleRate, 6);
+      const lpf = makeLPF(600, sampleRate, 0.5);
 
       const encoder = new lamejs.Mp3Encoder(2, sampleRate, 320);
       const mp3Chunks = [];
@@ -513,8 +513,7 @@
             l.last = (l.last + l.coeff * w) / (1 + l.coeff);
             s += l.last;
           }
-          s = applyBiquad(lpf,   s * 1.1);
-          s = applyBiquad(shelf, s);
+          s = applyBiquad(lpf, s * 3.5);
           const sample = Math.max(-32768, Math.min(32767, s * 26000));
           pcmL[i] = sample;
           pcmR[i] = sample;
